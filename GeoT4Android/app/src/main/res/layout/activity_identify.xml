@@ -1,0 +1,67 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_centerInParent="true"
+    tools:context="geot4android.geot4.esriitalia.com.geot4android.IdentifyActivity">
+
+    <ImageView
+        android:id="@+id/imgSymbol"
+        android:layout_width="150dp"
+        android:layout_height="150dp"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginLeft="20dp"
+        android:layout_marginTop="20dp"/>
+    
+    <TextView
+        android:id="@+id/txtPageNumber"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_alignTop="@+id/imgSymbol"
+        android:textSize="20sp"
+        android:layout_marginRight="20dp"
+        />
+
+    <ImageButton
+        android:id="@+id/imgnext"
+        android:src="@drawable/next"
+        android:layout_width="75dp"
+        android:layout_height="75dp"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="20dp"
+        android:layout_marginBottom="20dp"
+        android:padding="0dp"
+        android:clickable="true"
+        android:background="@null"
+        android:scaleType="fitXY"
+        />
+
+    <ImageButton
+        android:id="@+id/imgprevious"
+        android:src="@drawable/previous"
+        android:layout_width="75dp"
+        android:layout_height="75dp"
+        android:padding="0dp"
+        android:background="@null"
+        android:clickable="true"
+        android:layout_alignBottom="@+id/imgnext"
+        android:layout_toLeftOf="@+id/imgnext"
+        android:layout_marginRight="10dp"
+        android:scaleType="fitXY"
+        />
+
+    <ListView
+        android:id="@+id/lstValues"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/imgSymbol"
+        android:layout_above="@+id/imgnext"
+        android:layout_alignLeft="@+id/imgSymbol"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="10dp"
+        />
+
+</RelativeLayout>

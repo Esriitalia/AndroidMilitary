@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_gravity="center"
+    android:gravity="center"
+    android:layout_width="wrap_content" android:layout_height="wrap_content">
+
+    <ImageButton
+        android:id="@+id/imgTopo"
+        android:layout_width="150dp"
+        android:layout_height="99.75dp"
+        android:src="@drawable/topomap"
+        android:background="@null"
+        android:layout_marginLeft="5dp"
+        android:layout_marginTop="5dp"
+        />
+
+    <TextView
+        android:id="@+id/txtTopo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/imgTopo"
+        android:layout_alignRight="@+id/imgTopo"
+        android:text="Topographic"
+        android:layout_below="@+id/imgTopo"
+        android:gravity="center"
+        android:textSize="20sp"
+        android:layout_marginBottom="5dp"
+        />
+
+    <ImageButton
+        android:id="@+id/imgSatellite"
+        android:layout_width="150dp"
+        android:layout_height="99.75dp"
+        android:src="@drawable/tempimagery"
+        android:layout_toRightOf="@+id/imgTopo"
+        android:layout_alignTop="@+id/imgTopo"
+        android:background="@null"
+        android:layout_marginLeft="5dp"
+        />
+
+    <TextView
+        android:id="@+id/txtSatellite"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/imgSatellite"
+        android:layout_alignRight="@+id/imgSatellite"
+        android:text="Satellite"
+        android:layout_below="@+id/imgSatellite"
+        android:gravity="center"
+        android:textSize="20sp"
+        android:layout_marginBottom="5dp"
+        />
+
+    <ImageButton
+        android:id="@+id/imgStreets"
+        android:layout_width="150dp"
+        android:layout_height="99.75dp"
+        android:src="@drawable/streets"
+        android:layout_toRightOf="@+id/imgSatellite"
+        android:layout_alignTop="@+id/imgSatellite"
+        android:background="@null"
+        android:layout_marginLeft="5dp"
+        android:layout_marginRight="5dp"
+        />
+
+    <TextView
+        android:id="@+id/txtStreets"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/imgStreets"
+        android:layout_alignRight="@+id/imgStreets"
+        android:text="Streets"
+        android:layout_below="@+id/imgStreets"
+        android:gravity="center"
+        android:textSize="20sp"
+        android:layout_marginBottom="5dp"
+        />
+
+    <ImageButton
+        android:id="@+id/imgNatGeo"
+        android:layout_width="150dp"
+        android:layout_height="99.75dp"
+        android:src="@drawable/natgeo"
+        android:background="@null"
+        android:layout_below="@+id/txtTopo"
+        android:layout_alignLeft="@+id/imgTopo"
+        android:layout_alignRight="@+id/imgTopo"
+        />
+
+    <TextView
+        android:id="@+id/txtNatGeo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/imgNatGeo"
+        android:layout_alignRight="@+id/imgNatGeo"
+        android:text="Nation geographic"
+        android:layout_below="@+id/imgNatGeo"
+        android:gravity="center"
+        android:textSize="20sp"
+        android:layout_marginBottom="35dp"
+        />
+
+    <ImageButton
+        android:id="@+id/imgOceans"
+        android:layout_width="150dp"
+        android:layout_height="99.75dp"
+        android:src="@drawable/tempoceans"
+        android:layout_toRightOf="@+id/imgNatGeo"
+        android:layout_alignTop="@+id/imgNatGeo"
+        android:background="@null"
+        android:layout_marginLeft="5dp"
+        />
+
+    <TextView
+        android:id="@+id/txtOceans"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/imgOceans"
+        android:layout_alignRight="@+id/imgOceans"
+        android:text="Oceans"
+        android:layout_below="@+id/imgNatGeo"
+        android:gravity="center"
+        android:textSize="20sp"
+        android:layout_marginBottom="35dp"
+        />
+
+    <ImageButton
+        android:id="@+id/imgGray"
+        android:layout_width="150dp"
+        android:layout_height="99.75dp"
+        android:src="@drawable/graymap"
+        android:layout_toRightOf="@+id/imgOceans"
+        android:layout_alignTop="@+id/imgNatGeo"
+        android:background="@null"
+        />
+
+    <TextView
+        android:id="@+id/txtGray"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/imgGray"
+        android:layout_alignRight="@+id/imgGray"
+        android:text="Gray"
+        android:layout_below="@+id/imgGray"
+        android:gravity="center"
+        android:textSize="20sp"
+        android:layout_marginBottom="35dp"
+        />
+
+</RelativeLayout>
