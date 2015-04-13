@@ -83,6 +83,7 @@ public class MessageParser {
         String fuel_state = null;
         String rel_info = null;
         String ttype = null;
+        String other = null;
 
         while (parser.next() != XmlPullParser.END_TAG) {
             if (parser.getEventType() != XmlPullParser.START_TAG) {
@@ -90,6 +91,9 @@ public class MessageParser {
             }
 
             String pName = parser.getName();
+
+            Log.i("pName","pName:"+pName);
+
             if (pName.equals("_name")) {
                 name = readName(parser);
             } else if (pName.equals("_type")) {
@@ -104,6 +108,12 @@ public class MessageParser {
                 wkid = readWkid(parser);
             } else if (pName.equals("sic")) {
                 sic = readSic(parser);
+                if (sic.substring(1, 2).equals("*"))
+                    sic = sic.substring(0, 1) + "U" + sic.substring(2);
+                if (sic.substring(3, 4).equals("*"))
+                    sic = sic.substring(0, 3) + "P" + sic.substring(4);
+                sic = sic.replace("*","-");
+                if (sic.length()>10) sic=sic.substring(0,10);
             } else if (pName.equals("uniquedesignation")) {
                 uniquedesignation = readUniqueDesignation(parser);
             } else if (pName.equals("quantity")) {
@@ -124,6 +134,12 @@ public class MessageParser {
                 rel_info = readRelinfo(parser);
             } else if (pName.equals("type")) {
                 ttype = readTType(parser);
+            }
+            else
+            {
+                parser.require(XmlPullParser.START_TAG, ns, pName);
+                other = readText(parser);
+                parser.require(XmlPullParser.END_TAG, ns, pName);
             }
         }
         return new GeoMessage(name, type, action, id, controlpoints, wkid, sic,

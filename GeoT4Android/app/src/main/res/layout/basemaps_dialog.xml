@@ -75,7 +75,7 @@
         android:textSize="20sp"
         android:layout_marginBottom="5dp"
         />
-
+<!--
     <ImageButton
         android:id="@+id/imgNatGeo"
         android:layout_width="150dp"
@@ -146,5 +146,5 @@
         android:textSize="20sp"
         android:layout_marginBottom="35dp"
         />
-
+-->
 </RelativeLayout>

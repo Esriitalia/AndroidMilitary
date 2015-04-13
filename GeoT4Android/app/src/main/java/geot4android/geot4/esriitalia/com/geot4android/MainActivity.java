@@ -32,8 +32,16 @@ import com.esri.android.map.GraphicsLayer;
 import com.esri.android.map.Layer;
 import com.esri.android.map.MapOptions;
 import com.esri.android.map.MapView;
+import com.esri.android.map.TiledServiceLayer;
+import com.esri.android.map.ags.ArcGISDynamicMapServiceLayer;
+import com.esri.android.map.ags.ArcGISTiledMapServiceLayer;
 import com.esri.android.map.event.OnSingleTapListener;
+import com.esri.android.map.event.OnStatusChangedListener;
+import com.esri.android.map.popup.Popup;
 import com.esri.android.runtime.ArcGISRuntime;
+import com.esri.core.geometry.Envelope;
+import com.esri.core.geometry.Point;
+import com.esri.core.map.FeatureSet;
 import com.esri.core.map.Graphic;
 import com.esri.core.runtime.LicenseLevel;
 import com.esri.core.runtime.LicenseResult;
@@ -42,12 +50,11 @@ import com.esri.core.symbol.advanced.MessageGroupLayer;
 import com.esri.core.symbol.advanced.MessageProcessor;
 import com.esri.core.symbol.advanced.SymbolDictionary;
 import com.esri.core.symbol.advanced.SymbolProperties;
+import com.esri.core.tasks.identify.IdentifyParameters;
 import com.oguzdev.circularfloatingactionmenu.library.FloatingActionButton;
 import com.oguzdev.circularfloatingactionmenu.library.FloatingActionMenu;
 import com.oguzdev.circularfloatingactionmenu.library.SubActionButton;
-
 import org.xmlpull.v1.XmlPullParserException;
-
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -65,14 +72,18 @@ import java.util.List;
 import java.util.Map;
 
 import geot4android.geot4.esriitalia.com.geot4android.component.Compass;
+import geot4android.geot4.esriitalia.com.geot4android.model.LayersParser;
 import geot4android.geot4.esriitalia.com.geot4android.model.MessageParser;
 
 public class MainActivity extends Activity {
 
     MapView mMapView;
     Typeface typeface;
+    IdentifyParameters params = null;
     private String[] mFileList;
     private File mPath = new File(Environment.getExternalStorageDirectory() + "//Download//nvgfilestest//");
+    private File mConfPath = new File(Environment.getExternalStorageDirectory() + "//Download//geot4configuration//");
+    private String mConfFile = "layersconfig.xml";
     private String mChosenFile;
     private static final int DIALOG_LOAD_FILE = 1000;
     private MessageGroupLayer messageGrLayer;
@@ -86,6 +97,8 @@ public class MainActivity extends Activity {
     Thread player = null;
     udpMessages udpmessages;
 
+    ArrayList<LayersParser.ServiceLayer> serviceLayers = new ArrayList<>();
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -98,46 +111,27 @@ public class MainActivity extends Activity {
 
         typeface = Typeface.createFromAsset(getAssets(),"fonts/VertigoPlusFLF.ttf");
 
+        serviceLayers = openLayers();
+
         mMapView = (MapView)findViewById(R.id.map);
         mMapView.setEsriLogoVisible(true);
         mMapView.enableWrapAround(true);
         mMapView.setAllowRotationByPinch(true);
 
+        addBasemap();
+
         Compass mCompass = new Compass(this, null, mMapView);
         mMapView.addView(mCompass);
 
-        try {
-            SharedPreferences prefs = getSharedPreferences("geot4prefs", Context.MODE_PRIVATE);
-            int symbol_type = prefs.getInt("symbol_type", 0);
-            double symbolscale = prefs.getFloat("symbolscale", 1.5f);
-            SymbolDictionary.DictionaryType dt = SymbolDictionary.DictionaryType.MIL2525C;
-            if (symbol_type==0) dt = SymbolDictionary.DictionaryType.APP6B;
-            messageGrLayer = new MessageGroupLayer(dt,symbolscale);
-            mMapView.addLayer(messageGrLayer);
-            mProcessor = messageGrLayer.getMessageProcessor();
-        } catch (FileNotFoundException e1) {
-            e1.printStackTrace();
-        }
-
-
-        sics = new ArrayList<>();
-        names = new ArrayList<>();
-
-        List<SymbolProperties> symbols;
-        try {
-            symbols = mProcessor.getSymbolDictionary().findSymbols();
-            String name = "";
-            for (SymbolProperties props : symbols) {
-                Map<String, String> symbVals = props.getValues();
-                String sicCode = symbVals.get("SymbolID");
-                name = props.getName();
-                sics.add(sicCode);
-                names.add(name);
+        mMapView.setOnStatusChangedListener(new OnStatusChangedListener() {
+            @Override
+            public void onStatusChanged(Object o, STATUS status) {
+                if (OnStatusChangedListener.STATUS.INITIALIZED == status) {
+                    addLayers();
+                    trackPrepare();
+                }
             }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        });
 
         mMapView.setOnSingleTapListener(new OnSingleTapListener() {
             @Override
@@ -159,6 +153,7 @@ public class MainActivity extends Activity {
         ImageView rlOpen = new ImageView(this);
         final ImageView rlPlay = new ImageView(this);
         ImageView rlSettings = new ImageView(this);
+        ImageView rlLayers = new ImageView(this);
 
         FrameLayout.LayoutParams subContents = new FrameLayout.LayoutParams(getResources().getDimensionPixelSize(R.dimen.sub_action_menu_size), getResources().getDimensionPixelSize(R.dimen.sub_action_menu_size));
         FrameLayout.LayoutParams subMargins = new FrameLayout.LayoutParams(getResources().getDimensionPixelSize(R.dimen.sub_action_content_menu_size), getResources().getDimensionPixelSize(R.dimen.sub_action_content_menu_size));
@@ -173,11 +168,13 @@ public class MainActivity extends Activity {
         rlPlay.setImageDrawable(getResources().getDrawable(R.drawable.play));
         rlSettings.setImageDrawable(getResources().getDrawable(R.drawable.settings));
         rlInfo.setImageDrawable(getResources().getDrawable(R.drawable.info));
+        rlLayers.setImageDrawable(getResources().getDrawable(R.drawable.layers));
 
         final FloatingActionMenu centerLowerMenu = new FloatingActionMenu.Builder(this)
                 .addSubActionView(rLSubBuilder.setContentView(rlMap, subMargins).build())
                 .addSubActionView(rLSubBuilder.setContentView(rlOpen, subMargins).build())
                 .addSubActionView(rLSubBuilder.setContentView(rlPlay, subMargins).build())
+                .addSubActionView(rLSubBuilder.setContentView(rlLayers, subMargins).build())
                 .addSubActionView(rLSubBuilder.setContentView(rlInfo, subMargins).build())
                 .addSubActionView(rLSubBuilder.setContentView(rlSettings, subMargins).build())
                 .attachTo(centerLowerButton)
@@ -231,6 +228,14 @@ public class MainActivity extends Activity {
             }
         });
 
+        rlLayers.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                centerLowerMenu.close(true);
+                changeLayers();
+            }
+        });
+
         rlOpen.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -259,7 +264,6 @@ public class MainActivity extends Activity {
             public void onClick(View v) {
                 centerLowerMenu.close(true);
                 playenabled = !playenabled;
-                Log.i("playenabled", "playenabled:" + playenabled);
                 if (playenabled) {
                     if (player==null) {
                         udpmessages = new udpMessages();
@@ -282,6 +286,171 @@ public class MainActivity extends Activity {
 
             }
         });
+    }
+
+    private void trackPrepare()
+    {
+        try {
+            SharedPreferences prefs = getSharedPreferences("geot4prefs", Context.MODE_PRIVATE);
+            int symbol_type = prefs.getInt("symbol_type", 0);
+            double symbolscale = prefs.getFloat("symbolscale", 1.5f);
+            SymbolDictionary.DictionaryType dt = SymbolDictionary.DictionaryType.MIL2525C;
+            if (symbol_type==0) dt = SymbolDictionary.DictionaryType.APP6B;
+            messageGrLayer = new MessageGroupLayer(dt,symbolscale);
+            messageGrLayer.setName("Tracks");
+            mMapView.addLayer(messageGrLayer);
+            mProcessor = messageGrLayer.getMessageProcessor();
+        } catch (FileNotFoundException e1) {
+            e1.printStackTrace();
+        }
+
+
+        sics = new ArrayList<>();
+        names = new ArrayList<>();
+
+        List<SymbolProperties> symbols;
+        try {
+            symbols = mProcessor.getSymbolDictionary().findSymbols();
+            String name = "";
+            for (SymbolProperties props : symbols) {
+                Map<String, String> symbVals = props.getValues();
+                String sicCode = symbVals.get("SymbolID");
+                name = props.getName();
+                sics.add(sicCode);
+                names.add(name);
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private ArrayList<LayersParser.ServiceLayer> openLayers() {
+        File file = new File(mConfPath+"/"+mConfFile);
+        InputStream is = null;
+        try {
+            is = new FileInputStream(file);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        LayersParser parser = new LayersParser();
+
+        List<LayersParser.ServiceLayer> serviceLayers = null;
+        try {
+            serviceLayers = parser.parse(is);
+
+        } catch (XmlPullParserException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (is != null) {
+                try {
+                    is.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        ArrayList<LayersParser.ServiceLayer> result = new ArrayList<>();
+        for (LayersParser.ServiceLayer layer : serviceLayers) {
+            result.add(layer);
+        }
+        return result;
+    }
+
+    private Dialog changeLayers() {
+        Dialog dialog = null;
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        builder.setTitle("Choose layers");
+
+        int i=0;
+        ArrayList<String> items = new ArrayList<>();
+        ArrayList<Boolean> selects = new ArrayList<>();
+        for (Layer slayer:mMapView.getLayers())
+        {
+            if (i>0) {
+                items.add(slayer.getName());
+                selects.add(slayer.getOpacity() > 0);
+            }
+            i++;
+        }
+
+        boolean[] sels = new boolean[selects.size()];
+        String[] itms = new String[items.size()];
+        for (int l=0; l<selects.size(); l++) sels[l]=selects.get(l);
+        for (int l=0; l<items.size(); l++) itms[l]=items.get(l);
+
+        builder.setMultiChoiceItems(itms,sels, new DialogInterface.OnMultiChoiceClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which, boolean isChecked) {
+                float op = 0f;
+                if (isChecked) op=1f;
+                mMapView.getLayer(which+1).setOpacity(op);
+            }
+        });
+
+        dialog = builder.show();
+        return dialog;
+    }
+
+    void addBasemap()
+    {
+        int i=0;
+        for (LayersParser.ServiceLayer layer : serviceLayers) {
+            if (i<3 && layer.visibility)
+            {
+                addLayer(layer);
+            }
+            i++;
+        }
+    }
+
+    void addLayers()
+    {
+        int i=0;
+        for (LayersParser.ServiceLayer layer : serviceLayers) {
+            if (i>2) addLayer(layer);
+            i++;
+        }
+    }
+
+    void addLayer(LayersParser.ServiceLayer layer)
+    {
+        if (layer.type.equals("TiledMapServiceLayer"))
+        {
+            ArcGISTiledMapServiceLayer tiled = new ArcGISTiledMapServiceLayer(layer.url);
+            tiled.setName(layer.name);
+            if (!layer.visibility) tiled.setOpacity(0f);
+            mMapView.addLayer(tiled);
+        }
+        else if (layer.type.equals("DynamicMapServiceLayer"))
+        {
+            ArcGISDynamicMapServiceLayer dynamic = new ArcGISDynamicMapServiceLayer(layer.url);
+            dynamic.setName(layer.name);
+            if (!layer.visibility) dynamic.setOpacity(0f);
+            mMapView.addLayer(dynamic);
+        }
+    }
+
+    void addLayer(LayersParser.ServiceLayer layer, int index)
+    {
+        if (layer.type.equals("TiledMapServiceLayer"))
+        {
+            ArcGISTiledMapServiceLayer tiled = new ArcGISTiledMapServiceLayer(layer.url);
+            tiled.setName(layer.name);
+            tiled.setVisible(layer.visibility);
+            mMapView.addLayer(tiled,index);
+        }
+        else if (layer.type.equals("DynamicMapServiceLayer"))
+        {
+            ArcGISDynamicMapServiceLayer dynamic = new ArcGISDynamicMapServiceLayer(layer.url);
+            dynamic.setName(layer.name);
+            dynamic.setVisible(layer.visibility);
+            mMapView.addLayer(dynamic,index);
+        }
     }
 
     void viewTrackInfo(float x, float y)
@@ -308,6 +477,30 @@ public class MainActivity extends Activity {
                 values.add(vals);
             }
         }
+
+/*        Popup popup;
+        ArrayList<Integer> layids = new ArrayList<>();
+        for (Layer l:mMapView.getLayers()) {
+            if (!l.getClass().equals(MessageGroupLayer.class))
+            {
+                Point identifyPoint = mMapView.toMapPoint(x, y);
+                params = new IdentifyParameters();
+                params.setTolerance(10);
+                params.setDPI(98);
+                params.setLayers(new int[] { 4 });
+                params.setLayerMode(IdentifyParameters.ALL_LAYERS);
+                params.setGeometry(identifyPoint);
+                params.setSpatialReference(mMapView.getSpatialReference());
+                params.setMapHeight(mMapView.getHeight());
+                params.setMapWidth(mMapView.getWidth());
+                params.setReturnGeometry(false);
+                Envelope env = new Envelope();
+                mMapView.getExtent().queryEnvelope(env);
+                params.setMapExtent(env);
+
+            }
+        }*/
+
         if (cicledone)
         {
             Intent intent = new Intent(this, IdentifyActivity.class);
@@ -611,7 +804,8 @@ public class MainActivity extends Activity {
         imgTopo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mMapView.setMapOptions(new MapOptions(MapOptions.MapType.TOPO));
+                addLayer(serviceLayers.get(0),0);
+                mMapView.removeLayer(1);
                 dialog.dismiss();
             }
         });
@@ -622,7 +816,8 @@ public class MainActivity extends Activity {
         imgSatellite.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mMapView.setMapOptions(new MapOptions(MapOptions.MapType.SATELLITE));
+                addLayer(serviceLayers.get(1),0);
+                mMapView.removeLayer(1);
                 dialog.dismiss();
             }
         });
@@ -633,13 +828,14 @@ public class MainActivity extends Activity {
         imgStreets.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mMapView.setMapOptions(new MapOptions(MapOptions.MapType.STREETS));
+                addLayer(serviceLayers.get(2),0);
+                mMapView.removeLayer(1);
                 dialog.dismiss();
             }
         });
         TextView txtStreets = (TextView) dialog.findViewById(R.id.txtStreets);
         txtStreets.setTypeface(typeface);
-
+/*
         ImageButton imgNatGeo = (ImageButton) dialog.findViewById(R.id.imgNatGeo);
         imgNatGeo.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -648,6 +844,7 @@ public class MainActivity extends Activity {
                 dialog.dismiss();
             }
         });
+
         TextView txtNatGeo = (TextView) dialog.findViewById(R.id.txtNatGeo);
         txtNatGeo.setTypeface(typeface);
 
@@ -672,7 +869,7 @@ public class MainActivity extends Activity {
         });
         TextView txtGray = (TextView) dialog.findViewById(R.id.txtGray);
         txtGray.setTypeface(typeface);
-
+        */
         dialog.show();
     }
 
